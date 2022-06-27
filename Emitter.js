@@ -43,5 +43,9 @@ export default class Emitter {
             this.topics[id].delete(listener);
         }
     }
+    
+    destroy() {
+        this.topics = {};
+    }
 
 }
