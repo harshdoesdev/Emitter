@@ -1,51 +1,47 @@
 export default class Emitter {
 
-    constructor() {
-        this.topics = {};
+    #subscriptions = new Map()
+    
+    on(type, subscriber) {
+        if(!this.#subscriptions.has(type)) {
+            this.#subscriptions.set(type, new Set());
+        }
+
+        const subscribers = this.#subscriptions.get(type);
+
+        subscribers.add(subscriber);
+
+        return () => this.off(type, subscriber);
     }
 
-    emit(id, ...data) {
-        const listeners = this.topics[id];
-        
-        if(!listeners || listeners.size < 0) {
+    off(type, subscriber) {
+        if(!this.#subscriptions.has(type)) {
             return;
         }
 
-        listeners.forEach(listener => listener(...data));
+        const subscribers = this.#subscriptions.get(type);
+
+        subscribers.delete(subscriber);
     }
 
-    hasTopic(id) {
-        return Reflect.has(this.topics, id);
-    }
-
-    on(id, listener) {
-        if(!this.hasTopic(id)) {
-            this.topics[id] = new Set();
-        }
-
-        this.topics[id].add(listener);
-
-        return () => this.off(id, listener);
-    }
-
-    once(id, listener) {
+    once(type, subscriber) {
         const proxy = (...data) => {
-            this.off(id, proxy);
-
-            listener(...data);
+            subscriber(...data);
+            
+            this.off(type, proxy);
         };
-
-        return this.on(id, proxy);
+        
+        return this.on(type, proxy);
     }
 
-    off(id, listener) {
-        if(this.hasTopic(id)) {
-            this.topics[id].delete(listener);
+    emit(type, ...data) {
+        if(!this.#subscriptions.has(type)) {
+            return;
         }
-    }
-    
-    destroy() {
-        this.topics = {};
+
+        const subscribers = this.#subscriptions.get(type);
+
+        subscribers.forEach(subscriber => subscriber(...data));
     }
 
 }
